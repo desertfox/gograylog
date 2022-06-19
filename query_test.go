@@ -1,4 +1,4 @@
-package gograylog
+package main
 
 import (
 	"testing"
