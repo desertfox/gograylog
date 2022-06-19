@@ -1,3 +1,3 @@
-module github.com/desertfox/go-graylog
+module github.com/desertfox/gograylog
 
 go 1.17
