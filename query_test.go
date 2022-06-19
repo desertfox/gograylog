@@ -1,6 +1,7 @@
 package gograylog
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -15,6 +16,6 @@ func Test_buildBodyData(t *testing.T) {
 
 	t.Log(q.URL())
 	t.Log(q.buildBodyData())
-	t.Log(q.BodyData())
+	t.Log(fmt.Sprintf("%s", q.BodyData()))
 
 }

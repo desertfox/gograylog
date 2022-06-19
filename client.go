@@ -5,10 +5,6 @@ import (
 	"net/http"
 )
 
-var (
-	VERSION = "0.1"
-)
-
 type Client struct {
 	session    *session
 	httpClient *http.Client
@@ -22,17 +18,22 @@ func New(host, user, pass string) *Client {
 	}
 }
 
-func (c *Client) SearchStream(q Query) ([]byte, error) {
-	return c.request(q)
+func (c *Client) Execute(query, streamid string, frequency int) ([]byte, error) {
+	return c.request(Query{
+		Host:      c.session.loginRequest.Host,
+		Query:     query,
+		Streamid:  streamid,
+		Frequency: frequency,
+	})
 }
 
 func (c *Client) request(q Query) ([]byte, error) {
 	request, _ := http.NewRequest("GET", q.URL(), q.BodyData())
 	request.Close = true
 
-	request.Header.Set("Authorization", c.session.authHeader())
-	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Set("X-Requested-By", "GoGrayLog "+VERSION)
+	h := defaultHeader()
+	h.Add("Authorization", c.session.authHeader())
+	request.Header = h
 
 	response, err := c.httpClient.Do(request)
 	if err != nil {
@@ -46,4 +47,13 @@ func (c *Client) request(q Query) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func defaultHeader() http.Header {
+	h := http.Header{}
+
+	h.Add("Content-Type", "application/json; charset=UTF-8")
+	h.Add("X-Requested-By", "GoGrayLog 1")
+
+	return h
 }

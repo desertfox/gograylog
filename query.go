@@ -8,13 +8,6 @@ import (
 	"strconv"
 )
 
-var (
-//grayLogDateFormat   string = "2006-01-02T15:04:05.000Z"
-//relativeStrTempalte string = "%v/api/search/universal/relative?%v"
-//absoluteStrTempalte string = "%v/api/search/universal/absolute?%v"
-
-)
-
 type Query struct {
 	Host      string
 	Query     string
@@ -52,28 +45,3 @@ func (q Query) buildBodyData() map[string]interface{} {
 
 	return data
 }
-
-/*
-
-/views/search/messages
-
- "timerange": {
-    "type": "relative",
-    "range": 30000
-  }
-
-{
-	"streams": [
-	  "000000000000000000000001"
-	],
-	"timerange": [
-	  "absolute",
-	  {
-		"from": "2020-12-01T00:00:00.000Z",
-		"to": "2020-12-01T15:00:00.000Z"
-	  }
-	],
-	"query_string": { "type":"elasticsearch", "query_string":"your_query" }
-  }
-
-*/
