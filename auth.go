@@ -1,4 +1,4 @@
-package main
+package gograylog
 
 import (
 	"bytes"
@@ -41,7 +41,6 @@ func newSession(host, user, pass string, httpClient *http.Client) *session {
 
 	return sessionInstanceMap[host]
 }
-
 func (s *session) authHeader() string {
 	sessionId, err := s.loginRequest.execute(s.httpClient)
 	if err != nil {
