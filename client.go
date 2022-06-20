@@ -49,7 +49,8 @@ func (c *Client) request(q Query) ([]byte, error) {
 	request.Header = h
 
 	if DEBUG != "" {
-		httputil.DumpRequestOut(request, true)
+		dump, _ := httputil.DumpRequest(request, true)
+		fmt.Printf("request: %q\n", dump)
 	}
 
 	response, err := c.httpClient.Do(request)
@@ -57,6 +58,12 @@ func (c *Client) request(q Query) ([]byte, error) {
 		return []byte{}, err
 	}
 	defer response.Body.Close()
+
+	if DEBUG != "" {
+		dump, _ := httputil.DumpResponse(response, true)
+
+		fmt.Printf("response: %q", dump)
+	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
