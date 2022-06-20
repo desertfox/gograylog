@@ -36,14 +36,12 @@ func (c *Client) Execute(query, streamid string, frequency int) ([]byte, error) 
 func (c *Client) request(q Query) ([]byte, error) {
 	if DEBUG != "" {
 		fmt.Printf("query:%v\n", q)
-	}
-
-	request, _ := http.NewRequest("GET", q.URL(), q.BodyData())
-	request.Close = true
-
-	if DEBUG != "" {
+		fmt.Printf("url:%v\n", q.URL())
 		fmt.Printf("request body:%s\n", q.BodyData())
 	}
+
+	request, _ := http.NewRequest("POST", q.URL(), q.BodyData())
+	request.Close = true
 
 	h := defaultHeader()
 	h.Add("Authorization", c.session.authHeader())
