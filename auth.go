@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -45,11 +46,15 @@ func newSession(host, user, pass string, httpClient *http.Client) *session {
 }
 
 func (s *session) buildBasicAuth() {
-	sessionId, err := s.loginRequest.execute(s.httpClient)
-	if err != nil {
-		panic(err.Error())
+	if os.Getenv("GOGRAYLOG_UNPW") == "1" {
+		s.basicAuth = createAuthHeader(s.loginRequest.Username + ":" + s.loginRequest.Password)
+	} else {
+		sessionId, err := s.loginRequest.execute(s.httpClient)
+		if err != nil {
+			panic(err.Error())
+		}
+		s.basicAuth = createAuthHeader(sessionId + ":session")
 	}
-	s.basicAuth = createAuthHeader(sessionId)
 	s.updated = time.Now()
 }
 
@@ -94,6 +99,6 @@ func (lr loginRequest) execute(httpClient *http.Client) (string, error) {
 	return data["session_id"], nil
 }
 
-func createAuthHeader(sessionId string) string {
-	return "Basic " + base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%v:session", sessionId)))
+func createAuthHeader(s string) string {
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(s))
 }

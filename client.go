@@ -36,16 +36,15 @@ func (c *Client) Execute(query, streamid string, frequency int) ([]byte, error) 
 
 func (c *Client) request(q Query) ([]byte, error) {
 	if DEBUG != "" {
-		fmt.Printf("query:%v\n", q)
 		fmt.Printf("url:%v\n", q.URL())
-		fmt.Printf("request body:%s\n", q.BodyData())
+		fmt.Printf("query:%v\n", q)
 	}
 
 	request, _ := http.NewRequest("POST", q.URL(), q.BodyData())
-	request.Close = true
 
 	h := defaultHeader()
 	h.Add("Authorization", c.session.authHeader())
+	h.Add("Accept", "text/csv")
 	request.Header = h
 
 	if DEBUG != "" {
@@ -62,16 +61,12 @@ func (c *Client) request(q Query) ([]byte, error) {
 	if DEBUG != "" {
 		dump, _ := httputil.DumpResponse(response, true)
 
-		fmt.Printf("response: %q", dump)
+		fmt.Printf("response: %q\n", dump)
 	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return []byte{}, err
-	}
-
-	if DEBUG != "" {
-		fmt.Printf("response body:%s\n", body)
 	}
 
 	return body, nil
@@ -81,7 +76,7 @@ func defaultHeader() http.Header {
 	h := http.Header{}
 
 	h.Add("Content-Type", "application/json; charset=UTF-8")
-	h.Add("X-Requested-By", "GoGrayLog 1")
+	h.Add("X-Requested-By", "GoGrayLog")
 
 	return h
 }
