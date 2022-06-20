@@ -1,8 +1,14 @@
 package gograylog
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"os"
+)
+
+var (
+	DEBUG = os.Getenv("GOGRAYLOG_DEBUG")
 )
 
 type Client struct {
@@ -28,8 +34,16 @@ func (c *Client) Execute(query, streamid string, frequency int) ([]byte, error) 
 }
 
 func (c *Client) request(q Query) ([]byte, error) {
+	if DEBUG != "" {
+		fmt.Printf("query:%v\n", q)
+	}
+
 	request, _ := http.NewRequest("GET", q.URL(), q.BodyData())
 	request.Close = true
+
+	if DEBUG != "" {
+		fmt.Printf("request body:%s\n", q.BodyData())
+	}
 
 	h := defaultHeader()
 	h.Add("Authorization", c.session.authHeader())
@@ -44,6 +58,10 @@ func (c *Client) request(q Query) ([]byte, error) {
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return []byte{}, err
+	}
+
+	if DEBUG != "" {
+		fmt.Printf("response body:%s\n", body)
 	}
 
 	return body, nil

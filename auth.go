@@ -81,6 +81,10 @@ func (lr loginRequest) execute(httpClient *http.Client) (string, error) {
 		return "", err
 	}
 
+	if DEBUG != "" {
+		fmt.Printf("auth response: %s\n", body)
+	}
+
 	var data map[string]string
 	err = json.Unmarshal(body, &data)
 	if err != nil {
