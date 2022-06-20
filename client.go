@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"os"
 )
 
@@ -46,6 +47,10 @@ func (c *Client) request(q Query) ([]byte, error) {
 	h := defaultHeader()
 	h.Add("Authorization", c.session.authHeader())
 	request.Header = h
+
+	if DEBUG != "" {
+		httputil.DumpRequestOut(request, true)
+	}
 
 	response, err := c.httpClient.Do(request)
 	if err != nil {
