@@ -16,7 +16,7 @@ type Query struct {
 }
 
 func (q Query) URL() string {
-	return fmt.Sprintf("%s/views/search/messages", q.Host)
+	return fmt.Sprintf("%s/api/views/search/messages", q.Host)
 }
 
 func (q Query) BodyData() io.Reader {
