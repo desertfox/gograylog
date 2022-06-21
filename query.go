@@ -45,7 +45,7 @@ func (q Query) buildBodyData() map[string]interface{} {
 	data["timerange"] = relative
 	data["query_string"] = queryString
 	if len(q.Fields) > 0 {
-		data["fields"] = q.Fields
+		data["fields_in_order"] = q.Fields
 	}
 	data["limit"] = q.Limit
 
