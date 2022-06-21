@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"time"
 )
 
 var (
@@ -13,6 +14,7 @@ var (
 )
 
 type Client struct {
+	Query      Query
 	session    *session
 	httpClient *http.Client
 }
@@ -26,14 +28,15 @@ func New(host, user, pass string) *Client {
 }
 
 func (c *Client) Execute(query, streamid string, fields []string, limit, frequency int) ([]byte, error) {
-	return c.request(Query{
+	c.Query = Query{
 		Host:      c.session.loginRequest.Host,
 		Query:     query,
 		Streamid:  streamid,
 		Fields:    fields,
 		Limit:     limit,
 		Frequency: frequency,
-	})
+	}
+	return c.request(c.Query)
 }
 
 func (c *Client) request(q Query) ([]byte, error) {
@@ -76,4 +79,8 @@ func defaultHeader() http.Header {
 	h.Add("X-Requested-By", "GoGrayLog")
 
 	return h
+}
+
+func (c Client) BuildURL(from, to time.Time) string {
+	return c.Query.ToURL(from, to)
 }

@@ -5,7 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"strconv"
+	"strings"
+	"time"
+)
+
+var (
+	grayLogDateFormat string = "2006-01-02T15:04:05.000Z"
 )
 
 type Query struct {
@@ -50,4 +57,17 @@ func (q Query) buildBodyData() map[string]interface{} {
 	data["limit"] = q.Limit
 
 	return data
+}
+
+func (q Query) ToURL(from, to time.Time) string {
+	params := url.Values{}
+
+	params.Add("q", q.Query)
+	params.Add("fields_in_order", strings.Join(q.Fields, ", "))
+
+	params.Add("timerange", "absolute")
+	params.Add("from", from.Format(grayLogDateFormat))
+	params.Add("to", to.Format(grayLogDateFormat))
+
+	return fmt.Sprintf("%s/streams/%s/search?%s", q.Host, q.Streamid, params.Encode())
 }
