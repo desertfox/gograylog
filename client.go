@@ -25,21 +25,18 @@ func New(host, user, pass string) *Client {
 	}
 }
 
-func (c *Client) Execute(query, streamid string, frequency int) ([]byte, error) {
+func (c *Client) Execute(query, streamid string, fields []string, limit, frequency int) ([]byte, error) {
 	return c.request(Query{
 		Host:      c.session.loginRequest.Host,
 		Query:     query,
 		Streamid:  streamid,
+		Fields:    fields,
+		Limit:     limit,
 		Frequency: frequency,
 	})
 }
 
 func (c *Client) request(q Query) ([]byte, error) {
-	if DEBUG != "" {
-		fmt.Printf("url:%v\n", q.URL())
-		fmt.Printf("query:%v\n", q)
-	}
-
 	request, _ := http.NewRequest("POST", q.URL(), q.BodyData())
 
 	h := defaultHeader()

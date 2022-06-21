@@ -12,6 +12,8 @@ type Query struct {
 	Host      string
 	Query     string
 	Streamid  string
+	Fields    []string
+	Limit     int
 	Frequency int
 }
 
@@ -42,6 +44,10 @@ func (q Query) buildBodyData() map[string]interface{} {
 	data["streams"] = streams
 	data["timerange"] = relative
 	data["query_string"] = queryString
+	if len(q.Fields) > 0 {
+		data["fields"] = q.Fields
+	}
+	data["limit"] = q.Limit
 
 	return data
 }
