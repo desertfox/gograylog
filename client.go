@@ -9,9 +9,7 @@ import (
 	"time"
 )
 
-var (
-	DEBUG = os.Getenv("GOGRAYLOG_DEBUG")
-)
+var DEBUG bool = os.Getenv("GOGRAYLOG_DEBUG") != ""
 
 type Client struct {
 	Query      Query
@@ -39,6 +37,10 @@ func (c *Client) Execute(query, streamid string, fields []string, limit, frequen
 	return c.request(c.Query)
 }
 
+func (c Client) BuildURL(from, to time.Time) string {
+	return c.Query.ToURL(from, to)
+}
+
 func (c *Client) request(q Query) ([]byte, error) {
 	request, _ := http.NewRequest("POST", q.URL(), q.BodyData())
 
@@ -47,7 +49,7 @@ func (c *Client) request(q Query) ([]byte, error) {
 	h.Add("Accept", "text/csv")
 	request.Header = h
 
-	if DEBUG != "" {
+	if DEBUG {
 		dump, _ := httputil.DumpRequest(request, true)
 		fmt.Printf("request: %q\n", dump)
 	}
@@ -58,7 +60,7 @@ func (c *Client) request(q Query) ([]byte, error) {
 	}
 	defer response.Body.Close()
 
-	if DEBUG != "" {
+	if DEBUG {
 		dump, _ := httputil.DumpResponse(response, true)
 
 		fmt.Printf("response: %q\n", dump)
@@ -79,8 +81,4 @@ func defaultHeader() http.Header {
 	h.Add("X-Requested-By", "GoGrayLog")
 
 	return h
-}
-
-func (c Client) BuildURL(from, to time.Time) string {
-	return c.Query.ToURL(from, to)
 }

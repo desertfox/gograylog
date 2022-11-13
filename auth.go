@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"sync"
 	"time"
@@ -75,6 +76,12 @@ func (lr loginRequest) execute(httpClient *http.Client) (string, error) {
 
 	request.Header = defaultHeader()
 
+	if DEBUG {
+		dump, _ := httputil.DumpRequest(request, true)
+
+		fmt.Printf("auth request: %q\n", dump)
+	}
+
 	response, err := httpClient.Do(request)
 	if err != nil {
 		return "", err
@@ -86,7 +93,7 @@ func (lr loginRequest) execute(httpClient *http.Client) (string, error) {
 		return "", err
 	}
 
-	if DEBUG != "" {
+	if DEBUG {
 		fmt.Printf("auth response: %s\n", body)
 	}
 
