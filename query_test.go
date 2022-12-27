@@ -15,7 +15,7 @@ func Test_buildBodyData(t *testing.T) {
 	}
 
 	t.Log(q.url())
-	t.Log(q.request())
-	t.Log(fmt.Sprintf("%s", q.data()))
+	body, _ := q.body()
+	t.Log(fmt.Sprintf("%s", body))
 
 }
