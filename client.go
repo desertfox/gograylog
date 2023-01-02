@@ -14,7 +14,7 @@ import (
 
 const (
 	SessionsPath string = "api/system/sessions"
-	VERSION      string = "v0.1.0"
+	VERSION      string = "v1.1.0"
 )
 
 var (
