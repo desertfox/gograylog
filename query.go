@@ -1,10 +1,8 @@
 package gograylog
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -17,48 +15,53 @@ const (
 	MessagesPath      string = "api/system/sessions"
 )
 
-type query struct {
-	host, query, streamid string
-	fields                []string
-	limit, frequency      int
+type Query struct {
+	Host, QueryString, StreamID string
+	Fields                      []string
+	Limit, Frequency            int
 }
 
-func (q query) url() string {
-	return fmt.Sprintf("%s/%s", q.host, MessagesPath)
-}
-
-func (q query) body() (io.Reader, error) {
-	var data map[string]interface{} = make(map[string]interface{})
-	data["streams"] = []string{q.streamid}
+//JSON Method converts Query types to appropriate key/value mapping
+//then JSON encodes and returns the byte array
+func (q Query) JSON() ([]byte, error) {
+	data := make(map[string]interface{})
+	data["streams"] = []string{q.StreamID}
 	data["timerange"] = map[string]string{
 		"type":  "relative",
-		"range": strconv.Itoa(q.frequency * 60),
+		"range": strconv.Itoa(q.Frequency * 60),
 	}
 	data["query_string"] = map[string]string{
 		"type":         "elasticsearch",
-		"query_string": q.query,
+		"query_string": q.QueryString,
 	}
-	if len(q.fields) > 0 {
-		data["fields_in_order"] = q.fields
+	if len(q.Fields) > 0 {
+		data["fields_in_order"] = q.Fields
 	}
-	data["limit"] = q.limit
+	data["limit"] = q.Limit
 
 	dataJSON, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to encode query %w", err)
 	}
-	return bytes.NewReader(dataJSON), nil
+	return dataJSON, nil
 }
 
-func (q query) interval(from, to time.Time) string {
+//Url method takes a from and to time.Time to combine with Query struct fields to the appropriate
+//key value format then converts those to URL param format. The values are url encoded and
+//applied to search api endpoint
+func (q Query) Url(from, to time.Time) string {
 	params := url.Values{}
 
-	params.Add("q", q.query)
-	params.Add("fields_in_order", strings.Join(q.fields, ", "))
+	params.Add("q", q.QueryString)
+	params.Add("fields_in_order", strings.Join(q.Fields, ", "))
 
 	params.Add("timerange", "absolute")
 	params.Add("from", from.Format(GrayLogDateFormat))
 	params.Add("to", to.Format(GrayLogDateFormat))
 
-	return fmt.Sprintf("%s/streams/%s/search?%s", q.host, q.streamid, params.Encode())
+	return fmt.Sprintf("%s/streams/%s/search?%s", q.Host, q.StreamID, params.Encode())
+}
+
+func (q Query) endpoint() string {
+	return fmt.Sprintf("%s/%s", q.Host, MessagesPath)
 }

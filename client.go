@@ -10,12 +10,18 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"time"
 )
 
-const SessionsPath string = "api/system/sessions"
+const (
+	SessionsPath string = "api/system/sessions"
+	VERSION      string = "v0.1.0"
+)
 
-var errMissingHost error = errors.New("client host is empty")
+var (
+	errMissingHost      error = errors.New("client host is empty")
+	errMissingToken     error = errors.New("no token found on client")
+	errMissingSessionID error = errors.New("response is missing session_id key")
+)
 
 type HTTPInterface interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -23,7 +29,6 @@ type HTTPInterface interface {
 
 type Client struct {
 	Host, token string
-	query       query
 	HttpClient  HTTPInterface
 }
 
@@ -45,7 +50,7 @@ func (c *Client) Login(user, pass string) error {
 
 	data, err := json.Marshal(lr)
 	if err != nil {
-		return fmt.Errorf("error unable to encode loging request %w", err)
+		return fmt.Errorf("error unable to encode login request %w", err)
 	}
 
 	request, err := http.NewRequest(
@@ -57,11 +62,14 @@ func (c *Client) Login(user, pass string) error {
 		return fmt.Errorf("error unable to construct request %w", err)
 	}
 
-	request.Header = defaultHeader()
+	h := http.Header{}
+	h.Add("Content-Type", "application/json; charset=UTF-8")
+	h.Add("X-Requested-By", VERSION)
+	request.Header = h
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
-		return fmt.Errorf("error making request %w", err)
+		return err
 	}
 	defer response.Body.Close()
 
@@ -71,9 +79,13 @@ func (c *Client) Login(user, pass string) error {
 	}
 
 	var respData map[string]string
-	err = json.Unmarshal(body, &data)
+	err = json.Unmarshal(body, &respData)
 	if err != nil {
-		return fmt.Errorf("error unable to decode json data")
+		return fmt.Errorf("error unable to decode json data, %s", respData)
+	}
+
+	if _, ok := respData["session_id"]; !ok {
+		return errMissingSessionID
 	}
 
 	c.token = createAuthHeader(respData["session_id"] + ":session")
@@ -82,66 +94,35 @@ func (c *Client) Login(user, pass string) error {
 }
 
 //Execute query for a given stream id with specified fields and limit at a frequnecy.
-func (c *Client) Search(search, streamid string, fields []string, limit, frequency int) ([]byte, error) {
+func (c *Client) Search(q Query) ([]byte, error) {
 	if c.token == "" {
-		return nil, errors.New("no session found")
+		return nil, errMissingToken
 	}
 
-	c.query = query{
-		host:      c.Host,
-		query:     search,
-		streamid:  streamid,
-		fields:    fields,
-		limit:     limit,
-		frequency: frequency,
-	}
-
-	return c.request(c.query)
-}
-
-//Generate GrayLog URL string between from-to
-func (c Client) QueryFromTo(from, to time.Time) string {
-	return c.query.interval(from, to)
-}
-
-func (c *Client) request(q query) ([]byte, error) {
-	body, err := q.body()
+	body, err := q.JSON()
 	if err != nil {
-		return nil, fmt.Errorf("unable to build body %w", err)
+		return nil, err
 	}
 
-	request, err := http.NewRequest("POST", q.url(), body)
+	request, err := http.NewRequest("POST", q.endpoint(), bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("unable to build request %w", err)
+		return nil, err
 	}
 
-	c.setHeaders(request)
+	h := http.Header{}
+	h.Add("Content-Type", "application/json; charset=UTF-8")
+	h.Add("X-Requested-By", VERSION)
+	h.Add("Authorization", c.token)
+	h.Add("Accept", "text/csv")
+	request.Header = h
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("error submiting request %w", err)
+		return nil, err
 	}
 	defer response.Body.Close()
 
 	return io.ReadAll(response.Body)
-}
-
-func defaultHeader() http.Header {
-	h := &http.Header{}
-
-	h.Add("Content-Type", "application/json; charset=UTF-8")
-	h.Add("X-Requested-By", "GoGrayLog")
-
-	return *h
-}
-
-func (c *Client) setHeaders(r *http.Request) {
-	h := defaultHeader()
-
-	h.Add("Authorization", c.token)
-	h.Add("Accept", "text/csv")
-
-	r.Header = h
 }
 
 func createAuthHeader(s string) string {

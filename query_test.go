@@ -2,20 +2,16 @@ package gograylog
 
 import (
 	"fmt"
-	"testing"
 )
 
-func Test_buildBodyData(t *testing.T) {
-
-	var q query = query{
-		host:      "https://desertfox.dev",
-		query:     "error",
-		streamid:  "somehash",
-		frequency: 15,
+func ExampleQuery() {
+	q := Query{
+		Host:        "https://desertfox.dev",
+		QueryString: "error",
+		StreamID:    "somehash",
+		Frequency:   15,
 	}
 
-	t.Log(q.url())
-	body, _ := q.body()
-	t.Log(fmt.Sprintf("%s", body))
-
+	fmt.Println(q, q.endpoint())
+	//Output: {https://desertfox.dev error somehash [] 0 15} https://desertfox.dev/api/system/sessions
 }
