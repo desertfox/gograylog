@@ -12,7 +12,7 @@ import (
 // date format required by graylogs
 const (
 	GrayLogDateFormat string = "2006-01-02T15:04:05.000Z"
-	MessagesPath      string = "api/system/sessions"
+	MessagesPath      string = "api/views/search/messages"
 )
 
 type Query struct {
