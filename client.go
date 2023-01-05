@@ -1,4 +1,4 @@
-//GoGraylog is a simple client for interacting with a graylog instance.
+// GoGraylog is a simple client for interacting with a graylog instance.
 package gograylog
 
 import (
@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -28,13 +27,13 @@ type HTTPInterface interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-//Graylog SDK client
+// Graylog SDK client
 type Client struct {
 	Host, token string
 	HttpClient  HTTPInterface
 }
 
-//Method to execute login request to the configured Client.Host
+// Method to execute login request to the configured Client.Host
 func (c *Client) Login(user, pass string) error {
 	if c.Host == "" {
 		return errMissingHost
@@ -75,7 +74,7 @@ func (c *Client) Login(user, pass string) error {
 	}
 	defer response.Body.Close()
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body %w", err)
 	}
@@ -95,7 +94,7 @@ func (c *Client) Login(user, pass string) error {
 	return nil
 }
 
-//Execute Graylog search using GoGrayLog Query type
+// Execute Graylog search using GoGrayLog Query type
 func (c *Client) Search(q Query) ([]byte, error) {
 	if c.token == "" {
 		return nil, errMissingToken
@@ -106,7 +105,7 @@ func (c *Client) Search(q Query) ([]byte, error) {
 		return nil, err
 	}
 
-	request, err := http.NewRequest("POST", q.endpoint(), bytes.NewReader(body))
+	request, err := http.NewRequest("POST", q.endpoint(c.Host), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

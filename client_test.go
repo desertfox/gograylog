@@ -124,7 +124,6 @@ func Test_Search(t *testing.T) {
 				},
 			},
 			query: Query{
-				Host:        "https://desertfox.dev",
 				QueryString: "error",
 				StreamID:    "somehash",
 				Frequency:   15,
@@ -142,6 +141,11 @@ func Test_Search(t *testing.T) {
 					},
 					error: nil,
 				},
+			},
+			query: Query{
+				QueryString: "error",
+				StreamID:    "somehash",
+				Frequency:   15,
 			},
 		},
 	}
