@@ -14,7 +14,7 @@ import (
 const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
-	VERSION      string = "v1.1.0"
+	VERSION      string = "v1.1.1"
 )
 
 var (
