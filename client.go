@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
 	VERSION      string = "v1.1.0"
 )
@@ -27,12 +28,13 @@ type HTTPInterface interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+//Graylog SDK client
 type Client struct {
 	Host, token string
 	HttpClient  HTTPInterface
 }
 
-//
+//Method to execute login request to the configured Client.Host
 func (c *Client) Login(user, pass string) error {
 	if c.Host == "" {
 		return errMissingHost
@@ -93,7 +95,7 @@ func (c *Client) Login(user, pass string) error {
 	return nil
 }
 
-//Execute query for a given stream id with specified fields and limit at a frequnecy.
+//Execute Graylog search using GoGrayLog Query type
 func (c *Client) Search(q Query) ([]byte, error) {
 	if c.token == "" {
 		return nil, errMissingToken
