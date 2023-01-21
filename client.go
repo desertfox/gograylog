@@ -14,12 +14,12 @@ import (
 const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
-	VERSION      string = "v1.1.2"
+	VERSION      string = "v1.2.0"
 )
 
 var (
 	errMissingHost      error = errors.New("client host is empty")
-	errMissingToken     error = errors.New("no token found on client")
+	errMissingAuth      error = errors.New("no auth found on client")
 	errMissingSessionID error = errors.New("response is missing session_id key")
 )
 
@@ -29,11 +29,16 @@ type HTTPInterface interface {
 
 // Graylog SDK client
 type Client struct {
-	Host, token string
-	HttpClient  HTTPInterface
+	Host       string
+	Username   string
+	Password   string
+	HttpClient HTTPInterface
+	token      string
 }
 
 // Method to execute login request to the configured Client.Host
+// if this method is used to login username and password will be discarded
+// and the session token will be used for request authorization
 func (c *Client) Login(user, pass string) error {
 	if c.Host == "" {
 		return errMissingHost
@@ -96,8 +101,12 @@ func (c *Client) Login(user, pass string) error {
 
 // Execute Graylog search using GoGrayLog Query type
 func (c *Client) Search(q Query) ([]byte, error) {
-	if c.token == "" {
-		return nil, errMissingToken
+	if c.Host == "" {
+		return nil, errMissingHost
+	}
+
+	if c.token == "" && (c.Username == "" || c.Password == "") {
+		return nil, errMissingAuth
 	}
 
 	body, err := q.JSON()
@@ -113,8 +122,14 @@ func (c *Client) Search(q Query) ([]byte, error) {
 	h := http.Header{}
 	h.Add("Content-Type", "application/json; charset=UTF-8")
 	h.Add("X-Requested-By", VERSION)
-	h.Add("Authorization", c.token)
 	h.Add("Accept", "text/csv")
+
+	if c.token != "" {
+		h.Add("Authorization", c.token)
+	} else {
+		request.SetBasicAuth(c.Username, c.Password)
+	}
+
 	request.Header = h
 
 	response, err := c.HttpClient.Do(request)

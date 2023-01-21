@@ -108,10 +108,18 @@ func Test_Search(t *testing.T) {
 		expected    error
 	}{
 		{
-			description: "missing token",
+			description: "missing host",
 			client:      Client{},
 			query:       Query{},
-			expected:    errMissingToken,
+			expected:    errMissingHost,
+		},
+		{
+			description: "missing token",
+			client: Client{
+				Host: "host",
+			},
+			query:    Query{},
+			expected: errMissingAuth,
 		},
 		{
 			description: "http error",
