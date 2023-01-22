@@ -15,7 +15,7 @@ const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
 	MessagesPath string = "api/views/search/messages"
-	VERSION      string = "v1.2.0"
+	VERSION      string = "v1.3.0"
 )
 
 var (
@@ -26,6 +26,11 @@ var (
 
 type HTTPInterface interface {
 	Do(req *http.Request) (*http.Response, error)
+}
+
+type ClientInterface interface {
+	Login(string, string) error
+	Search(QueryInterface) ([]byte, error)
 }
 
 // Graylog SDK client
@@ -101,7 +106,7 @@ func (c *Client) Login(user, pass string) error {
 }
 
 // Execute Graylog search using GoGrayLog Query type
-func (c *Client) Search(q Query) ([]byte, error) {
+func (c *Client) Search(q QueryInterface) ([]byte, error) {
 	if c.Host == "" {
 		return nil, errMissingHost
 	}
