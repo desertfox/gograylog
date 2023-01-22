@@ -10,10 +10,7 @@ import (
 )
 
 // date format required by graylogs
-const (
-	GrayLogDateFormat string = "2006-01-02T15:04:05.000Z"
-	MessagesPath      string = "api/views/search/messages"
-)
+const GrayLogDateFormat string = "2006-01-02T15:04:05.000Z"
 
 type Query struct {
 	QueryString, StreamID string
@@ -60,8 +57,4 @@ func (q Query) Url(host string, from, to time.Time) string {
 	params.Add("to", to.Format(GrayLogDateFormat))
 
 	return fmt.Sprintf("%s/streams/%s/search?%s", host, q.StreamID, params.Encode())
-}
-
-func (q Query) endpoint(host string) string {
-	return fmt.Sprintf("%s/%s", host, MessagesPath)
 }

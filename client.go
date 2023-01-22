@@ -14,6 +14,7 @@ import (
 const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
+	MessagesPath string = "api/views/search/messages"
 	VERSION      string = "v1.2.0"
 )
 
@@ -114,7 +115,11 @@ func (c *Client) Search(q Query) ([]byte, error) {
 		return nil, err
 	}
 
-	request, err := http.NewRequest("POST", q.endpoint(c.Host), bytes.NewReader(body))
+	request, err := http.NewRequest(
+		"POST",
+		fmt.Sprintf("%v/%v", c.Host, MessagesPath),
+		bytes.NewReader(body),
+	)
 	if err != nil {
 		return nil, err
 	}

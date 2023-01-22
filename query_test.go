@@ -11,6 +11,6 @@ func ExampleQuery() {
 		Frequency:   15,
 	}
 
-	fmt.Println(q, q.endpoint("https://desertfox.dev"))
-	//Output: {error somehash [] 0 15} https://desertfox.dev/api/views/search/messages
+	fmt.Println(q)
+	//Output: {error somehash [] 0 15}
 }
