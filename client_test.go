@@ -2,10 +2,12 @@ package gograylog
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"testing"
 )
@@ -79,7 +81,7 @@ func Test_Login(t *testing.T) {
 				Host: "potato",
 				HttpClient: &httpClientMock{
 					response: &http.Response{
-						Body: io.NopCloser(bytes.NewReader([]byte(`{"session_id": "SESSIONID"}`))),
+						Body: io.NopCloser(bytes.NewReader(testLoginResponse)),
 					},
 					error: nil,
 				},
@@ -102,24 +104,27 @@ func Test_Login(t *testing.T) {
 
 func Test_Search(t *testing.T) {
 	cases := []struct {
-		description string
-		client      Client
-		query       Query
-		expected    error
+		description   string
+		client        Client
+		query         Query
+		expectedError error
+		expectedData  []byte
 	}{
 		{
-			description: "missing host",
-			client:      Client{},
-			query:       Query{},
-			expected:    errMissingHost,
+			description:   "missing host",
+			client:        Client{},
+			query:         Query{},
+			expectedError: errMissingHost,
+			expectedData:  []byte{},
 		},
 		{
 			description: "missing token",
 			client: Client{
 				Host: "host",
 			},
-			query:    Query{},
-			expected: errMissingAuth,
+			query:         Query{},
+			expectedError: errMissingAuth,
+			expectedData:  []byte{},
 		},
 		{
 			description: "http error",
@@ -136,16 +141,17 @@ func Test_Search(t *testing.T) {
 				StreamID:    "somehash",
 				Frequency:   15,
 			},
-			expected: errTestHTTP,
+			expectedError: errTestHTTP,
+			expectedData:  []byte{},
 		},
 		{
-			description: "valid search",
+			description: "valid search with token",
 			client: Client{
 				Host:  "potato",
 				token: "sometoken",
 				HttpClient: &httpClientMock{
 					response: &http.Response{
-						Body: io.NopCloser(bytes.NewReader(testLoginResponse)),
+						Body: io.NopCloser(newBuf()),
 					},
 					error: nil,
 				},
@@ -155,14 +161,40 @@ func Test_Search(t *testing.T) {
 				StreamID:    "somehash",
 				Frequency:   15,
 			},
+			expectedError: nil,
+			expectedData:  newBuf().Bytes(),
+		},
+		{
+			description: "valid search with basicauth",
+			client: Client{
+				Host:     "potato",
+				Username: "username",
+				Password: "password",
+				HttpClient: &httpClientMock{
+					response: &http.Response{
+						Body: io.NopCloser(newBuf()),
+					},
+					error: nil,
+				},
+			},
+			query: Query{
+				QueryString: "error",
+				StreamID:    "somehash",
+				Frequency:   15,
+			},
+			expectedError: nil,
+			expectedData:  newBuf().Bytes(),
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.description, func(t *testing.T) {
-			_, result := tt.client.Search(tt.query)
-			if result != tt.expected {
-				t.Errorf("expected %d, but got %d", tt.expected, result)
+			b, result := tt.client.Search(tt.query)
+			if result != tt.expectedError {
+				t.Errorf("expected %d, but got %d", tt.expectedError, result)
+			}
+			if string(b) != string(tt.expectedData) {
+				t.Errorf("expected %s, but got %s", tt.expectedData, b)
 			}
 		})
 	}
@@ -173,4 +205,27 @@ func ExampleClient() {
 	err := c.Login(tUser, tPass)
 	fmt.Println(err)
 	//Output ds
+}
+
+func newBuf() *bytes.Buffer {
+	var testSearchResponse *bytes.Buffer = bytes.NewBuffer([]byte{})
+	records := [][]string{
+		{"message"},
+		{"m1 error"},
+		{"m2 error"},
+	}
+
+	w := csv.NewWriter(testSearchResponse)
+	for _, record := range records {
+		if err := w.Write(record); err != nil {
+			log.Fatalln("error writing record to csv:", err)
+		}
+	}
+	w.Flush()
+
+	if err := w.Error(); err != nil {
+		log.Fatal(err)
+	}
+
+	return testSearchResponse
 }
