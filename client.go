@@ -15,7 +15,7 @@ const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
 	MessagesPath string = "api/views/search/messages"
-	VERSION      string = "v1.3.0"
+	VERSION      string = "v1.3.1"
 )
 
 var (
@@ -129,18 +129,15 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 		return nil, err
 	}
 
-	h := http.Header{}
-	h.Add("Content-Type", "application/json; charset=UTF-8")
-	h.Add("X-Requested-By", VERSION)
-	h.Add("Accept", "text/csv")
+	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
+	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
+	request.Header.Add("Accept", "text/csv")
 
 	if c.token != "" {
-		h.Add("Authorization", c.token)
+		request.Header.Add("Authorization", c.token)
 	} else {
 		request.SetBasicAuth(c.Username, c.Password)
 	}
-
-	request.Header = h
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
