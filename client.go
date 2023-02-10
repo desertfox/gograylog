@@ -15,7 +15,7 @@ const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
 	MessagesPath string = "api/views/search/messages"
-	VERSION      string = "v1.3.1"
+	VERSION      string = "v1.3.2"
 )
 
 var (
@@ -77,6 +77,7 @@ func (c *Client) Login(user, pass string) error {
 	h := http.Header{}
 	h.Add("Content-Type", "application/json; charset=UTF-8")
 	h.Add("X-Requested-By", VERSION)
+	h.Add("Accept", "text/csv")
 	request.Header = h
 
 	response, err := c.HttpClient.Do(request)
