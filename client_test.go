@@ -130,7 +130,7 @@ func Test_Search(t *testing.T) {
 			description: "http error",
 			client: Client{
 				Host:  "potato",
-				token: "faketoken",
+				Token: "faketoken",
 				HttpClient: &httpClientMock{
 					response: nil,
 					error:    errTestHTTP,
@@ -148,28 +148,7 @@ func Test_Search(t *testing.T) {
 			description: "valid search with token",
 			client: Client{
 				Host:  "potato",
-				token: "sometoken",
-				HttpClient: &httpClientMock{
-					response: &http.Response{
-						Body: io.NopCloser(newBuf()),
-					},
-					error: nil,
-				},
-			},
-			query: Query{
-				QueryString: "error",
-				StreamID:    "somehash",
-				Frequency:   15,
-			},
-			expectedError: nil,
-			expectedData:  newBuf().Bytes(),
-		},
-		{
-			description: "valid search with basicauth",
-			client: Client{
-				Host:     "potato",
-				Username: "username",
-				Password: "password",
+				Token: "sometoken",
 				HttpClient: &httpClientMock{
 					response: &http.Response{
 						Body: io.NopCloser(newBuf()),

@@ -15,7 +15,7 @@ const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
 	MessagesPath string = "api/views/search/messages"
-	VERSION      string = "v1.3.2"
+	VERSION      string = "v1.4.0"
 )
 
 var (
@@ -36,21 +36,16 @@ type ClientInterface interface {
 // Graylog SDK client
 type Client struct {
 	Host       string
-	Username   string
-	Password   string
+	Token      string
 	HttpClient HTTPInterface
-	token      string
 }
 
-// Method to execute login request to the configured Client.Host
-// if this method is used to login username and password will be discarded
-// and the session token will be used for request authorization
 func (c *Client) Login(user, pass string) error {
 	if c.Host == "" {
 		return errMissingHost
 	}
 
-	lr := struct {
+	data, err := json.Marshal(struct {
 		Host     string `json:"host"`
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -58,9 +53,7 @@ func (c *Client) Login(user, pass string) error {
 		Host:     c.Host,
 		Username: user,
 		Password: pass,
-	}
-
-	data, err := json.Marshal(lr)
+	})
 	if err != nil {
 		return fmt.Errorf("error unable to encode login request %w", err)
 	}
@@ -74,11 +67,9 @@ func (c *Client) Login(user, pass string) error {
 		return fmt.Errorf("error unable to construct request %w", err)
 	}
 
-	h := http.Header{}
-	h.Add("Content-Type", "application/json; charset=UTF-8")
-	h.Add("X-Requested-By", VERSION)
-	h.Add("Accept", "text/csv")
-	request.Header = h
+	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
+	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
+	request.Header.Add("Accept", "application/json")
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
@@ -101,7 +92,7 @@ func (c *Client) Login(user, pass string) error {
 		return errMissingSessionID
 	}
 
-	c.token = createAuthHeader(respData["session_id"] + ":session")
+	c.Token = respData["session_id"]
 
 	return nil
 }
@@ -112,7 +103,7 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 		return nil, errMissingHost
 	}
 
-	if c.token == "" && (c.Username == "" || c.Password == "") {
+	if c.Token == "" {
 		return nil, errMissingAuth
 	}
 
@@ -133,12 +124,7 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
 	request.Header.Add("Accept", "text/csv")
-
-	if c.token != "" {
-		request.Header.Add("Authorization", c.token)
-	} else {
-		request.SetBasicAuth(c.Username, c.Password)
-	}
+	request.Header.Add("Authorization", createAuthHeader(c.Token+":session"))
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
@@ -146,7 +132,12 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 	}
 	defer response.Body.Close()
 
-	return io.ReadAll(response.Body)
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body %w", err)
+	}
+
+	return data, nil
 }
 
 func createAuthHeader(s string) string {
