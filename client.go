@@ -15,6 +15,7 @@ const (
 	//Endpoint to attempt login to
 	SessionsPath string = "api/system/sessions"
 	MessagesPath string = "api/views/search/messages"
+	StreamsPath  string = "api/streams"
 	VERSION      string = "v1.4.0"
 )
 
@@ -138,6 +139,44 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func (c *Client) Streams() ([]byte, error) {
+	if c.Host == "" {
+		return nil, errMissingHost
+	}
+
+	if c.Token == "" {
+		return nil, errMissingAuth
+	}
+
+	request, err := http.NewRequest(
+		"GET",
+		fmt.Sprintf("%v/%v", c.Host, StreamsPath),
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
+	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
+	request.Header.Add("Accept", "application/json")
+	request.Header.Add("Authorization", createAuthHeader(c.Token+":session"))
+
+	response, err := c.HttpClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body %w", err)
+	}
+
+	return data, nil
+
 }
 
 func createAuthHeader(s string) string {

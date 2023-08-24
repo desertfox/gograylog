@@ -179,6 +179,70 @@ func Test_Search(t *testing.T) {
 	}
 }
 
+func Test_Streams(t *testing.T) {
+	cases := []struct {
+		description   string
+		client        Client
+		expectedError error
+		expectedData  []byte
+	}{
+		{
+			description:   "missing host",
+			client:        Client{},
+			expectedError: errMissingHost,
+			expectedData:  []byte{},
+		},
+		{
+			description: "missing token",
+			client: Client{
+				Host: "host",
+			},
+			expectedError: errMissingAuth,
+			expectedData:  []byte{},
+		},
+		{
+			description: "http error",
+			client: Client{
+				Host:  "potato",
+				Token: "faketoken",
+				HttpClient: &httpClientMock{
+					response: nil,
+					error:    errTestHTTP,
+				},
+			},
+			expectedError: errTestHTTP,
+			expectedData:  []byte{},
+		},
+		{
+			description: "valid streams with token",
+			client: Client{
+				Host:  "potato",
+				Token: "sometoken",
+				HttpClient: &httpClientMock{
+					response: &http.Response{
+						Body: io.NopCloser(newBuf()),
+					},
+					error: nil,
+				},
+			},
+			expectedError: nil,
+			expectedData:  newBuf().Bytes(),
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.description, func(t *testing.T) {
+			b, result := tt.client.Streams()
+			if result != tt.expectedError {
+				t.Errorf("expected %d, but got %d", tt.expectedError, result)
+			}
+			if string(b) != string(tt.expectedData) {
+				t.Errorf("expected %s, but got %s", tt.expectedData, b)
+			}
+		})
+	}
+}
+
 func ExampleClient() {
 	c := Client{}
 	err := c.Login(tUser, tPass)
