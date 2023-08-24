@@ -16,7 +16,7 @@ const (
 	SessionsPath string = "api/system/sessions"
 	MessagesPath string = "api/views/search/messages"
 	StreamsPath  string = "api/streams"
-	VERSION      string = "v1.4.0"
+	VERSION      string = "v1.5.0"
 )
 
 var (
