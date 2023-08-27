@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	VERSION    string = "v1.6.1"
+	VERSION    string = "v1.6.2"
 	acceptJSON string = "application/json"
 	acceptCSV  string = "text/csv"
 )
@@ -60,7 +60,7 @@ func (c *Client) Login(user, pass string) error {
 		return fmt.Errorf("error unable to encode login request %w", err)
 	}
 
-	body, err := c.httpRequest("POST", "sessions", bytes.NewBuffer(data), acceptJSON, false)
+	body, err := c.httpRequest(http.MethodPost, "sessions", bytes.NewBuffer(data), acceptJSON, false)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 		return nil, err
 	}
 
-	return c.httpRequest("POST", "messages", bytes.NewReader(body), acceptCSV, true)
+	return c.httpRequest(http.MethodPost, "messages", bytes.NewReader(body), acceptCSV, true)
 }
 
 // Requests the Streams for the configured Client.Host graylog instance.
@@ -108,7 +108,7 @@ func (c *Client) Streams() ([]byte, error) {
 		return nil, err
 	}
 
-	return c.httpRequest("GET", "streams", nil, acceptJSON, true)
+	return c.httpRequest(http.MethodGet, "streams", nil, acceptJSON, true)
 }
 
 func (c *Client) httpRequest(method, route string, body io.Reader, accept string, sendAuth bool) ([]byte, error) {
