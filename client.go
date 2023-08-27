@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	VERSION    string = "v1.6.0"
+	VERSION    string = "v1.6.1"
 	acceptJSON string = "application/json"
 	acceptCSV  string = "text/csv"
 )
@@ -60,27 +60,15 @@ func (c *Client) Login(user, pass string) error {
 		return fmt.Errorf("error unable to encode login request %w", err)
 	}
 
-	request, err := c.httpRequest("POST", "sessions", bytes.NewBuffer(data), acceptJSON, false)
-	if err != nil {
-		return fmt.Errorf("error unable to construct request %w", err)
-	}
-
-	response, err := c.HttpClient.Do(request)
+	body, err := c.httpRequest("POST", "sessions", bytes.NewBuffer(data), acceptJSON, false)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
-
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, response.Body)
-	if err != nil {
-		return fmt.Errorf("error reading response body %w", err)
-	}
 
 	var session Session
-	err = json.Unmarshal(buf.Bytes(), &session)
+	err = json.Unmarshal(body, &session)
 	if err != nil {
-		return fmt.Errorf("error unable to decode json data, %v %s", err, buf.String())
+		return fmt.Errorf("error unable to decode json data, %v %s", err, string(body))
 	}
 
 	if err = session.IsValid(); err != nil {
@@ -107,24 +95,7 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 		return nil, err
 	}
 
-	request, err := c.httpRequest("POST", "messages", bytes.NewReader(body), acceptCSV, true)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := c.HttpClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, response.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body %w", err)
-	}
-
-	return buf.Bytes(), nil
+	return c.httpRequest("POST", "messages", bytes.NewReader(body), acceptCSV, true)
 }
 
 // Requests the Streams for the configured Client.Host graylog instance.
@@ -137,28 +108,10 @@ func (c *Client) Streams() ([]byte, error) {
 		return nil, err
 	}
 
-	request, err := c.httpRequest("GET", "streams", nil, acceptJSON, true)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := c.HttpClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, response.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body %w", err)
-	}
-
-	return buf.Bytes(), nil
-
+	return c.httpRequest("GET", "streams", nil, acceptJSON, true)
 }
 
-func (c *Client) httpRequest(method, route string, body io.Reader, accept string, sendAuth bool) (*http.Request, error) {
+func (c *Client) httpRequest(method, route string, body io.Reader, accept string, sendAuth bool) ([]byte, error) {
 	if _, ok := RouteMap[route]; !ok {
 		return nil, fmt.Errorf("route not found, %s", route)
 	}
@@ -178,7 +131,19 @@ func (c *Client) httpRequest(method, route string, body io.Reader, accept string
 		r.Header.Add("Authorization", createAuthHeader(c.Session.Id+":session"))
 	}
 
-	return r, nil
+	response, err := c.HttpClient.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func createAuthHeader(s string) string {
