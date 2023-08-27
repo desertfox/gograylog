@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"testing"
+	"time"
 )
 
 var (
@@ -28,8 +29,10 @@ func (h *httpClientMock) Do(req *http.Request) (*http.Response, error) {
 }
 
 func init() {
-	testResponses := make(map[string]string)
+	testResponses := make(map[string]interface{})
 	testResponses["session_id"] = "session id"
+	testResponses["username"] = "duck"
+	testResponses["valid_until"] = "2025-08-26T04:46:59.471+0000"
 	testLoginResponse, _ = json.Marshal(testResponses)
 }
 
@@ -73,12 +76,16 @@ func Test_Login(t *testing.T) {
 			},
 			username: "missingsessionid",
 			password: "secret",
-			expected: errMissingSessionID,
+			expected: errMissingSession,
 		},
 		{
 			description: "valid login",
 			client: Client{
 				Host: "potato",
+				Session: &Session{
+					Id:         "duck",
+					ValidUntil: ValidUntil(time.Now()),
+				},
 				HttpClient: &httpClientMock{
 					response: &http.Response{
 						Body: io.NopCloser(bytes.NewReader(testLoginResponse)),
@@ -118,19 +125,23 @@ func Test_Search(t *testing.T) {
 			expectedData:  []byte{},
 		},
 		{
-			description: "missing token",
+			description: "missing Session",
 			client: Client{
-				Host: "host",
+				Host:    "host",
+				Session: &Session{},
 			},
 			query:         Query{},
-			expectedError: errMissingAuth,
+			expectedError: errMissingSession,
 			expectedData:  []byte{},
 		},
 		{
 			description: "http error",
 			client: Client{
-				Host:  "potato",
-				Token: "faketoken",
+				Host: "potato",
+				Session: &Session{
+					Id:         "duck",
+					ValidUntil: ValidUntil(time.Now()),
+				},
 				HttpClient: &httpClientMock{
 					response: nil,
 					error:    errTestHTTP,
@@ -145,10 +156,13 @@ func Test_Search(t *testing.T) {
 			expectedData:  []byte{},
 		},
 		{
-			description: "valid search with token",
+			description: "valid search with Session",
 			client: Client{
-				Host:  "potato",
-				Token: "sometoken",
+				Host: "potato",
+				Session: &Session{
+					Id:         "duck",
+					ValidUntil: ValidUntil(time.Now().Add(1 * time.Hour)),
+				},
 				HttpClient: &httpClientMock{
 					response: &http.Response{
 						Body: io.NopCloser(newBuf()),
@@ -193,18 +207,22 @@ func Test_Streams(t *testing.T) {
 			expectedData:  []byte{},
 		},
 		{
-			description: "missing token",
+			description: "missing Session",
 			client: Client{
-				Host: "host",
+				Host:    "host",
+				Session: &Session{},
 			},
-			expectedError: errMissingAuth,
+			expectedError: errMissingSession,
 			expectedData:  []byte{},
 		},
 		{
 			description: "http error",
 			client: Client{
-				Host:  "potato",
-				Token: "faketoken",
+				Host: "potato",
+				Session: &Session{
+					Id:         "duck",
+					ValidUntil: ValidUntil(time.Now().Add(1 * time.Hour)),
+				},
 				HttpClient: &httpClientMock{
 					response: nil,
 					error:    errTestHTTP,
@@ -214,10 +232,13 @@ func Test_Streams(t *testing.T) {
 			expectedData:  []byte{},
 		},
 		{
-			description: "valid streams with token",
+			description: "valid streams with Session",
 			client: Client{
-				Host:  "potato",
-				Token: "sometoken",
+				Host: "potato",
+				Session: &Session{
+					Id:         "duck",
+					ValidUntil: ValidUntil(time.Now().Add(1 * time.Hour)),
+				},
 				HttpClient: &httpClientMock{
 					response: &http.Response{
 						Body: io.NopCloser(newBuf()),

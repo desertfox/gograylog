@@ -12,17 +12,18 @@ import (
 )
 
 const (
-	//Endpoint to attempt login to
-	SessionsPath string = "api/system/sessions"
-	MessagesPath string = "api/views/search/messages"
-	StreamsPath  string = "api/streams"
-	VERSION      string = "v1.5.0"
+	VERSION    string = "v1.6.0"
+	acceptJSON string = "application/json"
+	acceptCSV  string = "text/csv"
 )
 
 var (
-	errMissingHost      error = errors.New("client host is empty")
-	errMissingAuth      error = errors.New("no auth found on client")
-	errMissingSessionID error = errors.New("response is missing session_id key")
+	errMissingHost error             = errors.New("client host is empty")
+	RouteMap       map[string]string = map[string]string{
+		"sessions": "api/system/sessions",
+		"messages": "api/views/search/messages",
+		"streams":  "api/streams",
+	}
 )
 
 type HTTPInterface interface {
@@ -37,7 +38,7 @@ type ClientInterface interface {
 // Graylog SDK client
 type Client struct {
 	Host       string
-	Token      string
+	Session    *Session
 	HttpClient HTTPInterface
 }
 
@@ -59,18 +60,10 @@ func (c *Client) Login(user, pass string) error {
 		return fmt.Errorf("error unable to encode login request %w", err)
 	}
 
-	request, err := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%v/%v", c.Host, SessionsPath),
-		bytes.NewBuffer(data),
-	)
+	request, err := c.httpRequest("POST", "sessions", bytes.NewBuffer(data), acceptJSON, false)
 	if err != nil {
 		return fmt.Errorf("error unable to construct request %w", err)
 	}
-
-	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
-	request.Header.Add("Accept", "application/json")
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
@@ -78,22 +71,23 @@ func (c *Client) Login(user, pass string) error {
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, response.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body %w", err)
 	}
 
-	var respData map[string]string
-	err = json.Unmarshal(body, &respData)
+	var session Session
+	err = json.Unmarshal(buf.Bytes(), &session)
 	if err != nil {
-		return fmt.Errorf("error unable to decode json data, %s", respData)
+		return fmt.Errorf("error unable to decode json data, %v %s", err, buf.String())
 	}
 
-	if _, ok := respData["session_id"]; !ok {
-		return errMissingSessionID
+	if err = session.IsValid(); err != nil {
+		return err
 	}
 
-	c.Token = respData["session_id"]
+	c.Session = &session
 
 	return nil
 }
@@ -104,8 +98,8 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 		return nil, errMissingHost
 	}
 
-	if c.Token == "" {
-		return nil, errMissingAuth
+	if err := c.Session.IsValid(); err != nil {
+		return nil, err
 	}
 
 	body, err := q.JSON()
@@ -113,19 +107,10 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 		return nil, err
 	}
 
-	request, err := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%v/%v", c.Host, MessagesPath),
-		bytes.NewReader(body),
-	)
+	request, err := c.httpRequest("POST", "messages", bytes.NewReader(body), acceptCSV, true)
 	if err != nil {
 		return nil, err
 	}
-
-	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
-	request.Header.Add("Accept", "text/csv")
-	request.Header.Add("Authorization", createAuthHeader(c.Token+":session"))
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
@@ -133,36 +118,29 @@ func (c *Client) Search(q QueryInterface) ([]byte, error) {
 	}
 	defer response.Body.Close()
 
-	data, err := io.ReadAll(response.Body)
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body %w", err)
 	}
 
-	return data, nil
+	return buf.Bytes(), nil
 }
 
+// Requests the Streams for the configured Client.Host graylog instance.
 func (c *Client) Streams() ([]byte, error) {
 	if c.Host == "" {
 		return nil, errMissingHost
 	}
 
-	if c.Token == "" {
-		return nil, errMissingAuth
-	}
-
-	request, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf("%v/%v", c.Host, StreamsPath),
-		nil,
-	)
-	if err != nil {
+	if err := c.Session.IsValid(); err != nil {
 		return nil, err
 	}
 
-	request.Header.Add("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
-	request.Header.Add("Accept", "application/json")
-	request.Header.Add("Authorization", createAuthHeader(c.Token+":session"))
+	request, err := c.httpRequest("GET", "streams", nil, acceptJSON, true)
+	if err != nil {
+		return nil, err
+	}
 
 	response, err := c.HttpClient.Do(request)
 	if err != nil {
@@ -170,13 +148,37 @@ func (c *Client) Streams() ([]byte, error) {
 	}
 	defer response.Body.Close()
 
-	data, err := io.ReadAll(response.Body)
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body %w", err)
 	}
 
-	return data, nil
+	return buf.Bytes(), nil
 
+}
+
+func (c *Client) httpRequest(method, route string, body io.Reader, accept string, sendAuth bool) (*http.Request, error) {
+	if _, ok := RouteMap[route]; !ok {
+		return nil, fmt.Errorf("route not found, %s", route)
+	}
+	r, err := http.NewRequest(
+		method,
+		fmt.Sprintf("%v/%v", c.Host, RouteMap[route]),
+		body,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Header.Add("Content-Type", "application/json; charset=UTF-8")
+	r.Header.Add("X-Requested-By", fmt.Sprintf("GoGrayLog %s", VERSION))
+	r.Header.Add("Accept", accept)
+	if sendAuth {
+		r.Header.Add("Authorization", createAuthHeader(c.Session.Id+":session"))
+	}
+
+	return r, nil
 }
 
 func createAuthHeader(s string) string {
