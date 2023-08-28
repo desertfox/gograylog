@@ -49,3 +49,7 @@ func (v *ValidUntil) UnmarshalJSON(d []byte) error {
 
 	return nil
 }
+
+func (v ValidUntil) MarshalJSON() ([]byte, error) {
+	return time.Time(v).MarshalJSON()
+}
