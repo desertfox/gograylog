@@ -51,5 +51,5 @@ func (v *ValidUntil) UnmarshalJSON(d []byte) error {
 }
 
 func (v ValidUntil) MarshalJSON() ([]byte, error) {
-	return []byte(time.Time(v).Format(GraylogLayout)), nil
+	return []byte("\"" + time.Time(v).Format(GraylogLayout) + "\""), nil
 }

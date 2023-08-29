@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	VERSION    string = "v1.6.4"
+	VERSION    string = "v1.6.5"
 	acceptJSON string = "application/json"
 	acceptCSV  string = "text/csv"
 )
