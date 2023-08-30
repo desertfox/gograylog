@@ -140,7 +140,7 @@ func Test_Search(t *testing.T) {
 				Host: "potato",
 				Session: &Session{
 					Id:         "duck",
-					ValidUntil: ValidUntil(time.Now()),
+					ValidUntil: ValidUntil(time.Now().Add(1 * time.Hour)),
 				},
 				HttpClient: &httpClientMock{
 					response: nil,
