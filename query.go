@@ -9,9 +9,6 @@ import (
 	"time"
 )
 
-// date format required by graylogs
-const GrayLogDateFormat string = "2006-01-02T15:04:05.000Z"
-
 type QueryInterface interface {
 	JSON() ([]byte, error)
 	Url(string, time.Time, time.Time) string
@@ -63,8 +60,12 @@ func (q Query) Url(host string, from, to time.Time) string {
 	params.Add("fields_in_order", strings.Join(q.Fields, ", "))
 
 	params.Add("timerange", "absolute")
-	params.Add("from", from.Format(GrayLogDateFormat))
-	params.Add("to", to.Format(GrayLogDateFormat))
+	params.Add("from", formatTime(from))
+	params.Add("to", formatTime(to))
 
 	return fmt.Sprintf("%s/streams/%s/search?%s", host, q.StreamID, params.Encode())
+}
+
+func formatTime(t time.Time) string {
+	return t.Format(GraylogLayout)
 }
